@@ -1,0 +1,58 @@
+%global debug_package %{nil}
+
+Name: skopeo
+Epoch: 100
+Version: 1.4.1
+Release: 1%{?dist}
+Summary: Container image repository tool
+License: Apache-2.0
+URL: https://github.com/containers/skopeo/tags
+Source0: %{name}_%{version}.orig.tar.gz
+BuildRequires: golang-1.17
+BuildRequires: glibc-static
+BuildRequires: glib2-devel
+BuildRequires: gpgme-devel
+BuildRequires: libassuan-devel
+BuildRequires: libgpg-error-devel
+BuildRequires: libseccomp-devel
+BuildRequires: make
+BuildRequires: pkgconfig
+Requires: containers-common
+Requires: libassuan.so.0()(64bit)
+Requires: libglib-2.0.so.0()(64bit)
+Requires: libgpg-error.so.0()(64bit)
+Requires: libgpgme.so.11()(64bit)
+Requires: libseccomp.so.2()(64bit)
+
+%description
+skopeo is a command line utility for various operations on container
+images and image repositories. skopeo is able to inspect a repository on
+a Docker registry and fetch images layers. skopeo can copy container
+images between various storage mechanisms.
+
+%prep
+%autosetup -T -c -n %{name}_%{version}-%{release}
+tar -zx -f %{S:0} --strip-components=1 -C .
+
+%build
+mkdir -p bin
+set -ex && \
+    export CGO_ENABLED=1 && \
+    go build \
+        -mod vendor -buildmode pie -v \
+        -ldflags "-s -w" \
+        -tags "netgo osusergo exclude_graphdriver_devicemapper exclude_graphdriver_btrfs containers_image_openpgp" \
+        -o ./bin/skopeo ./cmd/skopeo
+
+%install
+install -Dpm755 -d %{buildroot}%{_bindir}
+install -Dpm755 -d %{buildroot}%{_prefix}/share/bash-completion/completions
+install -Dpm755 -t %{buildroot}%{_bindir}/ bin/skopeo
+install -Dpm755 -t %{buildroot}%{_prefix}/share/bash-completion/completions completions/bash/skopeo
+
+%files
+%license LICENSE
+%{_bindir}/skopeo
+%{_prefix}/share/bash-completion/completions/skopeo
+
+%changelog
